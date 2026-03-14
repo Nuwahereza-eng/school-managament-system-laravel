@@ -12,7 +12,6 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Redirector;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use mysql_xdevapi\Exception;
 
 class ClassroomController extends Controller
 {
@@ -27,14 +26,38 @@ class ClassroomController extends Controller
     }
 
     /**
-     * Display a listing of the resource.
+     * Display a listing of the resource with search and filter.
      *
+     * @param Request $request
      * @return Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        $classrooms = Classroom::with('students')->Paginate(10);
-        return view('classroom.index',compact('classrooms'));
+        $query = Classroom::withCount(['students', 'subjects']);
+
+        // Search functionality
+        if ($request->filled('search')) {
+            $query->search($request->search);
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Sort functionality
+        $sortField = $request->get('sort', 'created_at');
+        $sortDirection = $request->get('direction', 'desc');
+        $allowedSortFields = ['name', 'capacity', 'created_at'];
+        
+        if (in_array($sortField, $allowedSortFields)) {
+            $query->orderBy($sortField, $sortDirection);
+        }
+
+        $classrooms = $query->paginate(10)->appends($request->query());
+        $statusOptions = Classroom::getStatusOptions();
+
+        return view('classroom.index', compact('classrooms', 'statusOptions'));
     }
 
     /**
@@ -44,7 +67,8 @@ class ClassroomController extends Controller
      */
     public function create()
     {
-        return view('classroom.view');
+        $statusOptions = Classroom::getStatusOptions();
+        return view('classroom.view', compact('statusOptions'));
     }
 
     /**
@@ -55,20 +79,31 @@ class ClassroomController extends Controller
      */
     public function store(ClassroomAddUpdateRequest $request)
     {
-        $input = $request->all();
-        Classroom::create($input);
+        try {
+            Classroom::create([
+                'name' => $request->name,
+                'description' => $request->description,
+                'capacity' => $request->capacity ?? 30,
+                'status' => $request->status ?? 'active',
+            ]);
+        } catch (\Exception $exception) {
+            return redirect('/classroom/create')
+                ->withErrors($exception->getMessage())
+                ->withInput();
+        }
         return redirect('/classroom')->with('success', 'A New Classroom Added Successfully.');
     }
 
     /**
-     * Display the specified resource.
+     * Display the specified classroom.
      *
-     * @param  \App\Models\Classroom  $classroom
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
      */
-    public function show(Classroom $classroom)
+    public function show(int $id)
     {
-        //
+        $classroom = Classroom::with(['students', 'subjects.teacher', 'teachers'])->findOrFail($id);
+        return view('classroom.show', compact('classroom'));
     }
 
     /**
@@ -80,7 +115,8 @@ class ClassroomController extends Controller
     public function edit(int $id)
     {
         $classroom = Classroom::findOrFail($id);
-        return view('classroom.view', compact('classroom'));
+        $statusOptions = Classroom::getStatusOptions();
+        return view('classroom.view', compact('classroom', 'statusOptions'));
     }
 
     /**
@@ -92,23 +128,20 @@ class ClassroomController extends Controller
      */
     public function update(ClassroomAddUpdateRequest $request, int $id)
     {
-        $input = $request->all();
-        // one way to update a record.
-/*        $classroom = Classroom::findOrFail($id);
-        $classroom->name = $input['name'];
-        $classroom->description = $input['description'];
-        $classroom->save();*/
-
-        //another way to update a record.
         try {
-            Classroom::query()->where('id',$id)->update([
-                'name' => $input['name'],
-                'description' => $input['description']
+            $classroom = Classroom::findOrFail($id);
+            $classroom->update([
+                'name' => $request->name,
+                'description' => $request->description,
+                'capacity' => $request->capacity ?? $classroom->capacity,
+                'status' => $request->status ?? $classroom->status,
             ]);
-        } catch (Exception $exception){
-            echo $exception->getMessage();
+        } catch (\Exception $exception) {
+            return redirect('/classroom/edit/'.$id)
+                ->withErrors($exception->getMessage())
+                ->withInput();
         }
-        return redirect('/classroom');
+        return redirect('/classroom')->with('success', 'Classroom Updated Successfully.');
     }
 
     /**
@@ -120,10 +153,15 @@ class ClassroomController extends Controller
     public function destroy(int $id)
     {
         try {
-            Classroom::destroy($id);
-        } catch (Exception $exception){
-            echo $exception->getMessage();
+            $classroom = Classroom::findOrFail($id);
+            // Check if classroom has students
+            if ($classroom->students()->count() > 0) {
+                return redirect('/classroom')->withErrors('Cannot delete classroom with enrolled students.');
+            }
+            $classroom->delete();
+        } catch (\Exception $exception) {
+            return redirect('/classroom')->withErrors($exception->getMessage());
         }
-        return redirect('/classroom');
+        return redirect('/classroom')->with('success', 'Classroom deleted successfully.');
     }
 }

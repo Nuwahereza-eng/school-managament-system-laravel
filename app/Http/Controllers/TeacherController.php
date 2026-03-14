@@ -14,8 +14,6 @@ use Illuminate\Routing\Redirector;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use mysql_xdevapi\Exception;
-use Illuminate\Validation\Validator;
 
 class TeacherController extends Controller
 {
@@ -28,16 +26,50 @@ class TeacherController extends Controller
     {
         $this->middleware('auth');
     }
+
     /**
-     * Display a listing of the resource.
+     * Display a listing of the resource with search and filter capabilities.
      *
+     * @param Request $request
      * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        $teachers = Teacher::with('subjects')->Paginate(10);
+        $query = Teacher::with('subjects');
 
-        return view('teacher.index',compact('teachers'));
+        // Search functionality
+        if ($request->filled('search')) {
+            $query->search($request->search);
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->withStatus($request->status);
+        }
+
+        // Filter by specialization
+        if ($request->filled('specialization')) {
+            $query->withSpecialization($request->specialization);
+        }
+
+        // Filter by gender
+        if ($request->filled('gender')) {
+            $query->where('gender', $request->gender);
+        }
+
+        // Sort functionality
+        $sortField = $request->get('sort', 'created_at');
+        $sortDirection = $request->get('direction', 'desc');
+        $allowedSortFields = ['first_name', 'surname', 'teacher_num', 'hire_date', 'created_at'];
+        
+        if (in_array($sortField, $allowedSortFields)) {
+            $query->orderBy($sortField, $sortDirection);
+        }
+
+        $teachers = $query->paginate(10)->appends($request->query());
+        $statusOptions = Teacher::getStatusOptions();
+
+        return view('teacher.index', compact('teachers', 'statusOptions'));
     }
 
     /**
@@ -47,8 +79,9 @@ class TeacherController extends Controller
      */
     public function create()
     {
-        $classrooms = Classroom::all();
-        return view('teacher.view',compact('classrooms'));
+        $classrooms = Classroom::active()->get();
+        $statusOptions = Teacher::getStatusOptions();
+        return view('teacher.view', compact('classrooms', 'statusOptions'));
     }
 
     /**
@@ -62,6 +95,7 @@ class TeacherController extends Controller
         try {
             // Safely perform set of DB related queries if fail rollback all.
             DB::transaction(function () use ($request){
+                $photo_path = null;
                 if ($request->hasFile('photo')) {
                     $path = Str::of('Teachers/')->append($request->get('surname'));
                     // Save the file locally in the public/images folder under a new folder named /Teachers
@@ -69,7 +103,7 @@ class TeacherController extends Controller
                     $photo_path = $photo->storeAs($path, $photo->getClientOriginalName(), 'images');
                 }
 
-                Teacher::insert([
+                Teacher::create([
                     'teacher_num' => $this->generateTeacherNumber(),
                     'first_name' => $request->get('first_name'),
                     'surname' => $request->get('surname'),
@@ -79,25 +113,31 @@ class TeacherController extends Controller
                     'photo_path' => $photo_path,
                     'address' => $request->get('address'),
                     'gender' => $request->get('gender'),
+                    'status' => $request->get('status', 'active'),
+                    'hire_date' => $request->get('hire_date'),
+                    'qualification' => $request->get('qualification'),
+                    'specialization' => $request->get('specialization'),
                 ]);
             });
-        }catch (\Exception $exception){
+        } catch (\Exception $exception){
             // Back to form with errors
             return redirect('/teacher/create')
-                ->withErrors($exception->getMessage());
+                ->withErrors($exception->getMessage())
+                ->withInput();
         }
         return redirect('/teacher')->with('success', 'A New Teacher Added Successfully.');
     }
 
     /**
-     * Display the specified resource.
+     * Display the specified teacher details.
      *
-     * @param  \App\Models\Teacher  $teacher
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
      */
-    public function show(Teacher $teacher)
+    public function show(int $id)
     {
-        //
+        $teacher = Teacher::with(['subjects.classroom'])->findOrFail($id);
+        return view('teacher.show', compact('teacher'));
     }
 
     /**
@@ -108,38 +148,33 @@ class TeacherController extends Controller
      */
     public function edit(int $id)
     {
-        $classrooms = Classroom::all();
+        $classrooms = Classroom::active()->get();
         $teacher = Teacher::findOrFail($id);
-        return view('teacher.view', compact('teacher', 'classrooms' ));
+        $statusOptions = Teacher::getStatusOptions();
+        return view('teacher.view', compact('teacher', 'classrooms', 'statusOptions'));
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  TeacherAddUpdateRequest  $request
      * @param  int  $id
      * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Http\Response|\Illuminate\Routing\Redirector
      */
-    public function update(Request $request, int $id)
+    public function update(TeacherAddUpdateRequest $request, int $id)
     {
         $teacher = Teacher::findOrFail($id);
-        $this->validate($request, [
-            'first_name' => 'required|max:30',
-            'surname' => 'required|max:30',
-            'birth_date' => 'required',
-            'email' => ['required',Rule::unique('teachers', 'email')->ignore($id),],
-            'phone_number' => 'required|regex:/(0)[0-9]{10}/',
-            'photo' => 'required|mimes:jpeg,bmp,png,jpg|max:2048',
-            'address' => 'required',
-        ]);
         try {
             DB::transaction(function () use ($request, $teacher){
+                $photo_path = $teacher->photo_path;
                 if ($request->hasFile('photo')) {
                     try {
                         // remove the image locally.
-                        unlink(public_path('/images/' . $teacher->photo_path));
+                        if ($teacher->photo_path) {
+                            unlink(public_path('/images/' . $teacher->photo_path));
+                        }
                     } catch (\Exception $exception) {
-                        // Todo: To handel this.
+                        // Image doesn't exist, continue
                     }
                     $path = Str::of('Teachers/')->append($request->get('surname'));
                     // Save the file locally in the public/images folder under a new folder named /Teachers
@@ -154,15 +189,18 @@ class TeacherController extends Controller
                 $teacher->photo_path = $photo_path;
                 $teacher->address = $request->address;
                 $teacher->gender = $request->gender;
+                $teacher->status = $request->status ?? $teacher->status;
+                $teacher->hire_date = $request->hire_date;
+                $teacher->qualification = $request->qualification;
+                $teacher->specialization = $request->specialization;
                 $teacher->save();
             });
-        }catch (\Exception $exception){
+        } catch (\Exception $exception){
             // Back to form with errors
             return redirect('/teacher/edit/'.$id)
                 ->withErrors($exception->getMessage())->withInput();
         }
-        return redirect('/teacher')->with('success', 'A Teacher Updated Successfully.');
-
+        return redirect('/teacher')->with('success', 'Teacher Updated Successfully.');
     }
 
     /**
@@ -174,23 +212,28 @@ class TeacherController extends Controller
     public function destroy(int $id)
     {
         try {
-            Teacher::destroy($id);
-        } catch (Exception $exception){
-            echo $exception->getMessage();
+            $teacher = Teacher::findOrFail($id);
+            // Remove photo if exists
+            if ($teacher->photo_path) {
+                try {
+                    unlink(public_path('/images/' . $teacher->photo_path));
+                } catch (\Exception $e) {
+                    // Image doesn't exist, continue
+                }
+            }
+            $teacher->delete();
+        } catch (\Exception $exception){
+            return redirect('/teacher')->withErrors($exception->getMessage());
         }
-        return redirect('/teacher');
+        return redirect('/teacher')->with('success', 'Teacher deleted successfully.');
     }
 
-    // Todo: ask for the differences between these ways and which one has better performance.
-//    public function fetchSubjects(Request $request){
-//        $id = $request->get('id');
-//        $subs = Subject::query()->where('classroom_id', $id)->get();
-//        $outputhtml = '<option value="">Select a Subject</option>';
-//        foreach($subs as $sub) {
-//            $outputhtml .= '<option value="'.$sub->id.'">'.$sub->name.'</option>';
-//        }
-//        echo $outputhtml;
-//    }
+    /**
+     * Get subjects for a specific classroom (AJAX).
+     *
+     * @param int $id
+     * @return string
+     */
     public function getSubjects($id)
     {
         $subs = Subject::query()->where('classroom_id', $id)->get();
@@ -198,21 +241,32 @@ class TeacherController extends Controller
         foreach ($subs as $sub) {
             $outputhtml .= '<option value="' . $sub->id . '">' . $sub->name . '</option>';
         }
-        echo $outputhtml;
+        return $outputhtml;
     }
 
-    //Todo: Marge generateTeacherNumber, generateStudentNumber and generateSubjectNumber to be one generic function.
+    /**
+     * Generate a unique teacher number.
+     *
+     * @return string
+     */
     public function generateTeacherNumber(): string
     {
-        return (string)str('TN-')->append($this->getLastTCID());
+        return (string)str('TN-')->append($this->getLastTeacherId());
     }
-    function getLastTCID()
+
+    /**
+     * Get the last teacher ID for number generation.
+     *
+     * @return string
+     */
+    private function getLastTeacherId(): string
     {
         $last = Teacher::query()->orderByDesc('teacher_num')->first('teacher_num');
         if($last != null){
             $lastNum = (string)Str::of($last)->after('-');
-            return sprintf("%06d", (int)$lastNum +1);
-        } else
+            return sprintf("%06d", (int)$lastNum + 1);
+        } else {
             return sprintf("%06d", 1);
+        }
     }
 }

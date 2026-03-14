@@ -1,8 +1,8 @@
 @extends('layouts.auth_app')
 @section('content')
 <div class="auth-form-transparent text-left p-3">
-    <div class="brand-logo">
-
+    <div class="brand-logo text-center mb-4">
+        <span style="color: #248afd; font-weight: bold; font-size: 2rem;">SMS</span>
     </div>
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
@@ -33,10 +33,15 @@
                         <i class="ti-lock text-primary"></i>
                       </span>
                 </div>
-                <input type="password" class="form-control form-control-lg border-left-0"
+                <input type="password" class="form-control form-control-lg border-left-0 border-right-0"
                        name="password"
                        required autocomplete="current-password"
                        id="password" placeholder="Password">
+                <div class="input-group-append bg-transparent">
+                      <span class="input-group-text bg-transparent border-left-0" style="cursor: pointer;" onclick="togglePassword()">
+                        <i class="ti-eye text-primary" id="toggleIcon"></i>
+                      </span>
+                </div>
             </div>
         </div>
         <div class="my-2 d-flex justify-content-between align-items-center">
@@ -68,4 +73,21 @@
         </div>--}}
     </form>
 </div>
+
+<script>
+function togglePassword() {
+    var passwordInput = document.getElementById('password');
+    var toggleIcon = document.getElementById('toggleIcon');
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleIcon.classList.remove('ti-eye');
+        toggleIcon.classList.add('ti-eye-off');
+    } else {
+        passwordInput.type = 'password';
+        toggleIcon.classList.remove('ti-eye-off');
+        toggleIcon.classList.add('ti-eye');
+    }
+}
+</script>
 @endsection

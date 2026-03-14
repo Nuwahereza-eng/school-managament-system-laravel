@@ -26,15 +26,58 @@ class SubjectController extends Controller
     {
         $this->middleware('auth');
     }
+
     /**
-     * Display a listing of the resource.
+     * Display a listing of the resource with search and filter.
      *
+     * @param Request $request
      * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        $subjects = Subject::with(['classroom','teacher'])->Paginate(10);
-        return view('subject.index',compact('subjects'));
+        $query = Subject::with(['classroom', 'teacher']);
+
+        // Search functionality
+        if ($request->filled('search')) {
+            $query->search($request->search);
+        }
+
+        // Filter by classroom
+        if ($request->filled('classroom_id')) {
+            $query->inClassroom($request->classroom_id);
+        }
+
+        // Filter by teacher
+        if ($request->filled('teacher_id')) {
+            $query->byTeacher($request->teacher_id);
+        }
+
+        // Filter by semester
+        if ($request->filled('semester')) {
+            $query->inSemester($request->semester);
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Sort functionality
+        $sortField = $request->get('sort', 'created_at');
+        $sortDirection = $request->get('direction', 'desc');
+        $allowedSortFields = ['name', 'subject_code', 'semester', 'created_at'];
+        
+        if (in_array($sortField, $allowedSortFields)) {
+            $query->orderBy($sortField, $sortDirection);
+        }
+
+        $subjects = $query->paginate(10)->appends($request->query());
+        $classrooms = Classroom::active()->get();
+        $teachers = Teacher::active()->get();
+        $statusOptions = Subject::getStatusOptions();
+        $semesterOptions = Subject::getSemesterOptions();
+
+        return view('subject.index', compact('subjects', 'classrooms', 'teachers', 'statusOptions', 'semesterOptions'));
     }
 
     /**
@@ -44,9 +87,11 @@ class SubjectController extends Controller
      */
     public function create()
     {
-        $classrooms = Classroom::all();
-        $teachers = Teacher::all();
-        return view('subject.view',compact('classrooms','teachers'));
+        $classrooms = Classroom::active()->get();
+        $teachers = Teacher::active()->get();
+        $statusOptions = Subject::getStatusOptions();
+        $semesterOptions = Subject::getSemesterOptions();
+        return view('subject.view', compact('classrooms', 'teachers', 'statusOptions', 'semesterOptions'));
     }
 
     /**
@@ -59,32 +104,36 @@ class SubjectController extends Controller
     {
         try {
             DB::transaction(function () use ($request){
-                Subject::insert([
+                Subject::create([
                     'subject_code' => $this->generateSubjectNumber(),
                     'name' => $request->get('name'),
                     'semester' => $request->get('semester'),
                     'description' => $request->get('description'),
                     'teacher_id' => $request->get('teacher'),
                     'classroom_id' => $request->get('classroom'),
+                    'credits' => $request->get('credits', 3),
+                    'status' => $request->get('status', 'active'),
                 ]);
             });
-        }catch (\Exception $exception){
+        } catch (\Exception $exception){
             // Back to form with errors
             return redirect('/subject/create')
-                ->withErrors($exception->getMessage());
+                ->withErrors($exception->getMessage())
+                ->withInput();
         }
         return redirect('/subject')->with('success', 'A New Subject Added Successfully.');
     }
 
     /**
-     * Display the specified resource.
+     * Display the specified subject.
      *
-     * @param  \App\Models\Subject  $subject
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
      */
-    public function show(Subject $subject)
+    public function show(int $id)
     {
-        //
+        $subject = Subject::with(['classroom.students', 'teacher'])->findOrFail($id);
+        return view('subject.show', compact('subject'));
     }
 
     /**
@@ -95,10 +144,12 @@ class SubjectController extends Controller
      */
     public function edit(int $id)
     {
-        $classrooms = Classroom::all();
-        $teachers = Teacher::all();
+        $classrooms = Classroom::active()->get();
+        $teachers = Teacher::active()->get();
         $subject = Subject::findOrFail($id);
-        return view('subject.view', compact('teachers', 'classrooms','subject' ));
+        $statusOptions = Subject::getStatusOptions();
+        $semesterOptions = Subject::getSemesterOptions();
+        return view('subject.view', compact('teachers', 'classrooms', 'subject', 'statusOptions', 'semesterOptions'));
     }
 
     /**
@@ -118,14 +169,16 @@ class SubjectController extends Controller
                 $subject->description = $request->get('description');
                 $subject->teacher_id = $request->get('teacher');
                 $subject->classroom_id = $request->get('classroom');
+                $subject->credits = $request->get('credits', $subject->credits);
+                $subject->status = $request->get('status', $subject->status);
                 $subject->save();
             });
-        }catch (\Exception $exception){
+        } catch (\Exception $exception){
             // Back to form with errors
             return redirect('/subject/edit/'.$id)
                 ->withErrors($exception->getMessage())->withInput();
         }
-        return redirect('/subject')->with('success', 'A Subject Updated Successfully.');
+        return redirect('/subject')->with('success', 'Subject Updated Successfully.');
     }
 
     /**
@@ -139,22 +192,34 @@ class SubjectController extends Controller
         try {
             Subject::destroy($id);
         } catch (\Exception $exception){
-            echo $exception->getMessage();
+            return redirect('/subject')->withErrors($exception->getMessage());
         }
-        return redirect('/subject');
+        return redirect('/subject')->with('success', 'Subject deleted successfully.');
     }
 
+    /**
+     * Generate a unique subject code.
+     *
+     * @return string
+     */
     public function generateSubjectNumber(): string
     {
-        return (string)str('SC-')->append($this->getLastTCID());
+        return (string)str('SC-')->append($this->getLastSubjectId());
     }
-    function getLastTCID()
+
+    /**
+     * Get the last subject ID for code generation.
+     *
+     * @return string
+     */
+    private function getLastSubjectId(): string
     {
         $last = Subject::query()->orderByDesc('subject_code')->first('subject_code');
         if($last != null){
             $lastNum = (string)Str::of($last)->after('-');
-            return sprintf("%06d", (int)$lastNum +1);
-        } else
+            return sprintf("%06d", (int)$lastNum + 1);
+        } else {
             return sprintf("%06d", 1);
+        }
     }
 }

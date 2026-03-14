@@ -7,7 +7,31 @@
                 <div class="col-lg-12 grid-margin stretch-card">
                     <div class="card">
                         <div class="card-body">
-                            <h4 class="card-title">Subjects Table</h4>
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h4 class="card-title mb-0">Subjects Management</h4>
+                                <a href="/subject/create" class="btn btn-water-blue btn-sm">
+                                    <i class="ti-plus"></i> Add New Subject
+                                </a>
+                            </div>
+
+                            <!-- Success/Error Messages -->
+                            @if(session('success'))
+                                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                    {{ session('success') }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            @endif
+                            @if($errors->any())
+                                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                    <ul class="mb-0">
+                                        @foreach($errors->all() as $error)
+                                            <li>{{ $error }}</li>
+                                        @endforeach
+                                    </ul>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            @endif
+
                             <div class="table-responsive">
                                 <table class="table table-striped table-hover">
                                     <thead>
@@ -20,46 +44,51 @@
                                     </tr>
                                     </thead>
                                     <tbody>
-                                    @foreach($subjects as $subject)
+                                    @forelse($subjects as $subject)
                                         <tr>
                                             <td class="py-1">
-                                                {{$subject->subject_code}}
+                                                <span class="badge badge-slate">{{$subject->subject_code}}</span>
                                             </td>
                                             <td>
-                                                {{$subject->name}}
+                                                <strong>{{$subject->name}}</strong>
                                             </td>
                                             <td>
-                                                <a style="text-decoration: inherit; color: inherit;" title="Open Details" href="#">
-                                                    {{$subject->classroom->name}}
+                                                <span class="badge badge-primary-blue">{{$subject->classroom->name}}</span>
+                                            </td>
+                                            <td>
+                                                @if(isset($subject->teacher))
+                                                    <span class="badge badge-water-blue">{{$subject->teacher->first_name}} {{$subject->teacher->surname}}</span>
+                                                @else
+                                                    <span class="text-muted">Unassigned</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                <a href="/subject/edit/{{ $subject->id }}" class="action-btn action-btn-edit" title="Edit">
+                                                    <i class="ti-pencil-alt"></i>
                                                 </a>
-                                            </td>
-                                            <td>
-                                                <a style="text-decoration: inherit; color: inherit;" title="Open Details" href="#">
-                                                    {{(isset($subject->teacher))? $subject->teacher->first_name.' '.$subject->teacher->surname : ''}}
-                                                </a>
-                                            </td>
-                                            <td>
-                                                <div class="btn-group">
-                                                    <form action="/subject/edit/{{ $subject->id }}" method="get">
-                                                        @csrf
-                                                        <button type="submit" class="btn btn-dark ti-pencil-alt btn-rounded">
-                                                            Edit</button>
-                                                    </form>
-                                                    <form action="/subject/delete/{{ $subject->id }}" method="post">
-                                                        @method('DELETE')
-                                                        @csrf
-                                                        <button onclick="return confirm('Are you sure You want to delete this?')" type="submit" class="btn btn-danger ti-trash btn-rounded">
-                                                            Delete</button>
-                                                    </form>
-                                                </div>
-
+                                                <form action="/subject/delete/{{ $subject->id }}" method="post" class="d-inline">
+                                                    @method('DELETE')
+                                                    @csrf
+                                                    <button onclick="return confirm('Are you sure you want to delete this subject?')" 
+                                                            type="submit" class="action-btn action-btn-delete" title="Delete">
+                                                        <i class="ti-trash"></i>
+                                                    </button>
+                                                </form>
                                             </td>
                                         </tr>
-                                    @endforeach
+                                    @empty
+                                        <tr>
+                                            <td colspan="5" class="text-center py-4">
+                                                <i class="ti-book icon-lg text-muted"></i>
+                                                <p class="text-muted mt-2">No subjects found</p>
+                                                <a href="/subject/create" class="btn btn-water-blue btn-sm">Add First Subject</a>
+                                            </td>
+                                        </tr>
+                                    @endforelse
                                     </tbody>
                                 </table>
                             </div>
-                            <div class="d-flex justify-content-center">
+                            <div class="d-flex justify-content-center mt-4">
                                 {!! $subjects->links() !!}
                             </div>
                         </div>

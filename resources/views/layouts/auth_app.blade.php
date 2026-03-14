@@ -18,26 +18,51 @@
     <link rel="stylesheet" href="{{asset('/css/style.css')}}">
     <!-- endinject -->
     <link rel="shortcut icon" href="{{asset('/images/favicon.png')}}" />
+    <style>
+        .login-full-bg {
+            background: url("{{ asset('images/auth/login-bg.png') }}") no-repeat center center;
+            background-size: cover;
+            min-height: 100vh;
+            position: relative;
+        }
+        .login-full-bg::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+        }
+        .login-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 450px;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+        .login-copyright {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: #fff;
+            z-index: 1;
+        }
+    </style>
 </head>
 
 <body>
-<div class="container-scroller">
-    <div class="container-fluid page-body-wrapper full-page-wrapper">
-        <div class="content-wrapper d-flex align-items-stretch auth auth-img-bg">
-            <div class="row flex-grow">
-                <div class="col-lg-6 d-flex align-items-center justify-content-center">
-                    @yield('content')
-                </div>
-                <div class="col-lg-6 login-half-bg d-flex flex-row">
-                    <p class="text-white font-weight-medium text-center flex-grow align-self-end">Copyright &copy; <a href="https://www.linkedin.com/in/omar-kadish" target="_blank">Omar KADISH</a> 2021 - {{ date("Y") }}</p>
-                </div>
-            </div>
-        </div>
-        <!-- content-wrapper ends -->
+<div class="login-full-bg d-flex align-items-center justify-content-center">
+    <div class="login-card">
+        @yield('content')
     </div>
-    <!-- page-body-wrapper ends -->
+    <p class="login-copyright">Copyright &copy; <strong>Petercodes</strong> 2026</p>
 </div>
-<!-- container-scroller -->
 <!-- plugins:js -->
 <script src="{{asset('/vendors/base/vendor.bundle.base.js')}}"></script>
 <!-- endinject -->

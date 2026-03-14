@@ -8,77 +8,393 @@
 </p>
 
 
-[![This project Wakatime badge](https://wakatime.com/badge/user/7ff17389-c918-439b-9b81-291fae77221d/project/79d37c1a-0e85-4879-8691-2c59abdb6588.svg)](https://wakatime.com/@7ff17389-c918-439b-9b81-291fae77221d)
+# School Management System (Laravel)
 
+## 📋 Project Overview
 
-# School Management System (Laravel).
+School Management System is a comprehensive web application that manages students, teachers, classes, subjects, and more. The system provides full CRUD functionality with enhanced features including status tracking, search/filter capabilities, and detailed reporting through an interactive dashboard.
 
-## Objective:
-- School Management System is the system that manages students, teachers, classes, subjects, and many more. Here, the user can use the features of CRUD and manage students, teachers, subjects, and classes. Now talking about all the main functions of the system that is the feature to add, edit, delete, and view students, teachers, and classes. While adding a student, the user must provide full name, select gender, date of birth, select class, enrollment date, and parent's phone numbers. Additionally, students, teachers, classes, and subjects all have a unique and auto-generated number.
-      This sort of system may be used by middle and high schools to handle information in a methodical manner.
+### Key Features:
+- **Student Management**: Add, edit, delete, view students with status tracking (active, inactive, graduated, transferred, suspended)
+- **Teacher Management**: Full teacher profiles with qualification, specialization, hire date, and status tracking
+- **Classroom Management**: Manage classrooms with capacity tracking and status monitoring
+- **Subject Management**: Assign subjects to classrooms and teachers with credit hours and semester tracking
+- **Interactive Dashboard**: Real-time statistics, charts, and quick action buttons
+- **Search & Filter**: Advanced search and filter functionality across all modules
+- **Status Tracking**: Comprehensive status management for all entities
 
-## :signal_strength: Project Platform and Programing Languages: 
-  Laravel PHP Framework; A PHP framework includes libraries for commonly used functions, reducing the amount of original code that developers must write from scratch.
-  Laravel is a free, open-source PHP web framework built by Taylor Otwell and based on Symfony. 
+---
 
-  It is designed for building online applications that follow the model–view–controller (MVC) architectural pattern.
+## 🚀 Test 2 Improvements (From Test 1 Feedback)
 
-  As For the Database MySQL will be used which is a relational database management system that is free and open source.
+### 1. Enhanced Database Schema
+**New Migration**: `2026_03_11_064534_add_status_fields_to_students_and_teachers.php`
 
-  IDE Tool used for this project is PhpStorm.
+| Entity | New Fields Added |
+|--------|-----------------|
+| Students | `status` (enum), `notes` (text) |
+| Teachers | `status` (enum), `hire_date`, `qualification`, `specialization` |
+| Classrooms | `capacity` (integer), `status` (enum) |
+| Subjects | `credits` (integer), `status` (enum) |
 
-## :floppy_disk: Setup
+### 2. Enhanced Entity Relationships
+All models now have improved relationships with the database:
 
-* Clone the repo `https://github.com/OmarKadish/school-managament-system-laravel.git`
+**Student Model**:
+- `belongsTo` Classroom
+- `hasManyThrough` Subjects (via Classroom)
 
-* Install dependencies with this code line...
-Run `composer install`
+**Teacher Model**:
+- `hasMany` Subjects
+- `belongsToMany` Classrooms (through subjects)
 
-* Make sure you have your key generated. If not! Generate it with this command..
-`php artisan key:generate`
+**Classroom Model**:
+- `hasMany` Students
+- `hasMany` Subjects
+- `belongsToMany` Teachers (through subjects)
 
-* Run migration and seeds
-`php artisan migrate:fresh --seed`
+**Subject Model**:
+- `belongsTo` Classroom
+- `belongsTo` Teacher
 
-* To start the development environment
-Run `php artisan serve`
+### 3. Search and Filter Functionality
+All modules now support:
+- **Text Search**: Search by name, number, code, email, phone
+- **Filter by Status**: Active, Inactive, and entity-specific statuses
+- **Filter by Related Entity**: e.g., Students by Classroom, Subjects by Teacher
+- **Sortable Columns**: Click column headers to sort ascending/descending
 
-## :notebook: Developer notes:
+### 4. Improved UI/UX
+- **Status Badges**: Color-coded status indicators throughout the application
+- **Statistics Cards**: Quick overview of key metrics on the dashboard
+- **Interactive Charts**: Visual representation of data distribution
+- **Quick Action Buttons**: Fast access to common tasks
+- **Detail Views**: Dedicated show pages for each entity
+- **Responsive Tables**: Better mobile experience
 
-We used the <a href="https://github.com/nnjeim/world/" target="_blank">World</a> repo; A Laravel package which provides a list of the countries, states, cities, timezones, currencies and languages. But as a way of change and to work with Ajax insead of using api we used an XMLHttpRequest to list all countries and fill the other dropbox with the states according to the selected country. 
+### 5. Enhanced Data Validation
+Form Request classes updated with:
+- Custom validation messages in user-friendly language
+- Phone number format validation (Uganda format: 07XXXXXXXX or 256XXXXXXXX)
+- Name validation (letters, spaces, hyphens, apostrophes only)
+- Conditional validation rules (e.g., photo required only on create)
+- Proper attribute naming for error messages
 
+### 6. Dashboard with Statistics
+New `DashboardController` provides:
+- Total counts for all entities
+- Active entity counts
+- Status distribution data for charts
+- Students per classroom statistics
+- Recent records quick view
+- Gender distribution data
 
+### 7. Code Quality Improvements
+- **Named Routes**: All routes now have proper names for easier maintenance
+- **Query Scopes**: Reusable query methods in models (e.g., `scopeActive`, `scopeSearch`)
+- **Constants**: Status options defined as class constants
+- **Accessor Methods**: `getFullNameAttribute()` for consistent name display
+- **Error Handling**: Proper try-catch blocks with user-friendly error messages
+- **Flash Messages**: Success/error notifications for all operations
 
-## System Interfaces: 
-These interfaces will be actual interfaces through which the user will perform the desired tasks.
-* Login System: maintaining the login information of a manager after validating the Email and Password. The Registering System is halted thus only the system managers can create new admin account in the system.
-* Classrooms Management Interface: Allows the managers to use the full CRUD features like adding new class and manage it.
-* Teachers Management Interface: Allows the managers to use the full CRUD features like adding new teacher, manage his information, as well as upload profile photo.
-* Students Management Interface: Allows the managers to use the full CRUD features like adding new students, defining their class, and managing their profiles.
-* Subjects Management Interface: Allows the managers to use the full CRUD features for subjects, define subjects class, and assign a teacher for it.
-* Users Management Interface: Allows the managers to add new manager accounts or delete an exciting account that is no longer needed.
+---
 
-## :camera: Preview
-#### Login Page
-  ![image](https://user-images.githubusercontent.com/74814002/189502588-aaeba389-c599-449b-b23b-c4cece8d4f21.png)
+## 📊 Database Structure
 
-#### Dashboard Page
-  ![image](https://user-images.githubusercontent.com/74814002/189502602-3b497a67-f620-47b8-9e12-e8b26af401db.png)
+### Entity Relationship Diagram
 
-#### Create Instance Sample Page
-![image](https://user-images.githubusercontent.com/74814002/189502625-9532f029-fbd2-42ee-8f07-0083fd9dc31a.png)
+```
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│   TEACHERS   │────<│   SUBJECTS   │>────│  CLASSROOMS  │
+│              │     │              │     │              │
+│ - id         │     │ - id         │     │ - id         │
+│ - number     │     │ - code       │     │ - number     │
+│ - name       │     │ - name       │     │ - name       │
+│ - email      │     │ - semester   │     │ - capacity   │
+│ - phone      │     │ - credits    │     │ - status     │
+│ - gender     │     │ - status     │     └──────────────┘
+│ - status     │     │ - teacher_id │            │
+│ - hire_date  │     │ - class_id   │            │
+│ - qual...    │     └──────────────┘            │
+│ - special... │                                 │
+│ - photo      │                                 ▼
+└──────────────┘                         ┌──────────────┐
+                                         │   STUDENTS   │
+                                         │              │
+                                         │ - id         │
+                                         │ - number     │
+                                         │ - f_name     │
+                                         │ - l_name     │
+                                         │ - gender     │
+                                         │ - dob        │
+                                         │ - class_id   │
+                                         │ - status     │
+                                         │ - notes      │
+                                         └──────────────┘
+```
 
-#### List Instances Sample Page
-![image](https://user-images.githubusercontent.com/74814002/189502787-09a2b41c-4b42-4039-9609-1141913b475b.png)
+---
 
-## :file_folder: License
+## 🛠️ Technology Stack
 
-* This project is licensed under the terms of the MIT license.
+| Component | Technology |
+|-----------|------------|
+| Backend | Laravel 9.x (PHP 8.x) |
+| Database | MySQL 8.x |
+| Frontend | Bootstrap 5, Themify Icons |
+| Charts | Chart.js |
+| IDE | PhpStorm / VS Code |
 
-## :envelope: About me
+---
 
-* Repo created by [Omar Kadish](https://github.com/OmarKadish), My portfolio: [Omar](https://omarkadish.wordpress.com/)
+## 📥 Installation & Setup
 
-Hope it will help.
-Good Luck.
+### Prerequisites
+- PHP 8.0 or higher
+- Composer
+- MySQL 8.0 or higher
+- Node.js (optional, for frontend assets)
+
+### Installation Steps
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Nuwahereza-eng/school-managament-system-laravel.git
+   cd school-managament-system-laravel
+   ```
+
+2. **Install PHP dependencies**
+   ```bash
+   composer install
+   ```
+
+3. **Environment Setup**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
+
+4. **Configure Database**
+   Edit `.env` file with your database credentials:
+   ```
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=school_management
+   DB_USERNAME=your_username
+   DB_PASSWORD=your_password
+   ```
+
+5. **Run Migrations and Seeders**
+   ```bash
+   php artisan migrate:fresh --seed
+   ```
+
+6. **Start Development Server**
+   ```bash
+   php artisan serve
+   ```
+
+7. **Access the Application**
+   Open `http://localhost:8000` in your browser
+
+---
+
+## 📱 System Modules
+
+### 1. Authentication System
+- Secure login with email/password validation
+- Session management
+- Protected routes with middleware
+
+### 2. Dashboard
+- Real-time statistics overview
+- Interactive charts (Student Status, Teacher Status, Students per Classroom)
+- Quick action buttons
+- Recent records display
+
+### 3. Student Management
+- Full CRUD operations
+- Status tracking (Active, Inactive, Graduated, Transferred, Suspended)
+- Search by name, student number
+- Filter by classroom, status, gender
+- Sortable columns
+- Detail view with enrolled subjects
+
+### 4. Teacher Management
+- Full CRUD operations
+- Profile photo upload
+- Status tracking (Active, Inactive, On Leave, Terminated)
+- Professional details (qualification, specialization, hire date)
+- Search by name, teacher number, email
+- Filter by status, gender
+
+### 5. Classroom Management
+- Full CRUD operations
+- Capacity tracking
+- Status management
+- View enrolled students and assigned subjects
+- Search and filter capabilities
+
+### 6. Subject Management
+- Full CRUD operations
+- Credit hours tracking
+- Semester assignment
+- Teacher and classroom assignment
+- Status management
+
+### 7. User Management
+- Admin account management
+- Role-based access (managers only)
+
+---
+
+## 📸 Screenshots
+
+### Dashboard
+*(Add updated dashboard screenshot here)*
+
+### Student List with Search/Filter
+*(Add student list screenshot here)*
+
+### Student Detail View
+*(Add student detail screenshot here)*
+
+### Teacher Management
+*(Add teacher management screenshot here)*
+
+---
+
+## 📝 Status Options
+
+### Student Status
+| Status | Description |
+|--------|-------------|
+| Active | Currently enrolled and attending |
+| Inactive | Temporarily not attending |
+| Graduated | Completed studies |
+| Transferred | Moved to another school |
+| Suspended | Disciplinary suspension |
+
+### Teacher Status
+| Status | Description |
+|--------|-------------|
+| Active | Currently employed and teaching |
+| Inactive | Not currently teaching |
+| On Leave | Temporary leave of absence |
+| Terminated | Employment ended |
+
+### Classroom/Subject Status
+| Status | Description |
+|--------|-------------|
+| Active | Currently in use |
+| Inactive | Not currently active |
+
+---
+
+## 🔧 API Endpoints
+
+All routes are protected by authentication middleware.
+
+| Method | Route | Controller@Method | Description |
+|--------|-------|-------------------|-------------|
+| GET | /dashboard | DashboardController@index | Dashboard view |
+| GET | /students | StudentController@index | List students |
+| POST | /students | StudentController@store | Create student |
+| GET | /students/{id} | StudentController@show | View student |
+| PUT | /students/{id} | StudentController@update | Update student |
+| DELETE | /students/{id} | StudentController@destroy | Delete student |
+| GET | /teachers | TeacherController@index | List teachers |
+| POST | /teachers | TeacherController@store | Create teacher |
+| GET | /teachers/{id} | TeacherController@show | View teacher |
+| PUT | /teachers/{id} | TeacherController@update | Update teacher |
+| DELETE | /teachers/{id} | TeacherController@destroy | Delete teacher |
+| GET | /classrooms | ClassroomController@index | List classrooms |
+| POST | /classrooms | ClassroomController@store | Create classroom |
+| GET | /classrooms/{id} | ClassroomController@show | View classroom |
+| PUT | /classrooms/{id} | ClassroomController@update | Update classroom |
+| DELETE | /classrooms/{id} | ClassroomController@destroy | Delete classroom |
+| GET | /subjects | SubjectController@index | List subjects |
+| POST | /subjects | SubjectController@store | Create subject |
+| GET | /subjects/{id} | SubjectController@show | View subject |
+| PUT | /subjects/{id} | SubjectController@update | Update subject |
+| DELETE | /subjects/{id} | SubjectController@destroy | Delete subject |
+
+---
+
+## 📁 Project Structure
+
+```
+app/
+├── Http/
+│   ├── Controllers/
+│   │   ├── DashboardController.php    # NEW: Statistics dashboard
+│   │   ├── StudentController.php      # ENHANCED: Search, filter, show
+│   │   ├── TeacherController.php      # ENHANCED: Search, filter, show
+│   │   ├── ClassroomController.php    # ENHANCED: Search, filter, show
+│   │   └── SubjectController.php      # ENHANCED: Search, filter, show
+│   └── Requests/
+│       ├── StudentAddUpdateRequest.php # ENHANCED: Better validation
+│       └── TeacherAddUpdateRequest.php # ENHANCED: Better validation
+├── Models/
+│   ├── Student.php    # ENHANCED: Scopes, accessors, constants
+│   ├── Teacher.php    # ENHANCED: Scopes, accessors, constants
+│   ├── Classroom.php  # ENHANCED: Relationships, scopes
+│   └── Subject.php    # ENHANCED: Relationships, scopes
+└── ...
+
+database/
+└── migrations/
+    └── 2026_03_11_064534_add_status_fields_to_students_and_teachers.php # NEW
+
+resources/views/
+├── dashboard.blade.php       # ENHANCED: Statistics, charts
+├── student/
+│   ├── index.blade.php      # ENHANCED: Search, filter, badges
+│   ├── view.blade.php       # ENHANCED: Status fields
+│   └── show.blade.php       # NEW: Detail view
+├── teacher/
+│   ├── index.blade.php      # ENHANCED: Search, filter, badges
+│   └── show.blade.php       # NEW: Detail view
+└── ...
+```
+
+---
+
+## ✅ Test 2 Checklist
+
+- [x] **New Feature**: Dashboard with statistics and charts
+- [x] **New Feature**: Search and filter functionality across all modules
+- [x] **New Feature**: Status tracking for all entities
+- [x] **New Feature**: Detail (show) views for students and teachers
+- [x] **Code Improvement**: Named routes for maintainability
+- [x] **Code Improvement**: Query scopes in models
+- [x] **Code Improvement**: Enhanced validation with custom messages
+- [x] **Code Improvement**: Better error handling
+- [x] **UI Improvement**: Status badges with colors
+- [x] **UI Improvement**: Quick action buttons
+- [x] **UI Improvement**: Interactive charts
+- [x] **UI Improvement**: Responsive design improvements
+- [x] **Database Change**: New status fields
+- [x] **Database Change**: New teacher professional fields
+- [x] **Database Change**: Classroom capacity field
+- [x] **Database Change**: Subject credits field
+- [x] **Removed**: node_modules from submission package
+
+---
+
+## 📜 License
+
+This project is licensed under the terms of the MIT license.
+
+---
+
+## 👤 Author
+
+* Original repo by [Omar Kadish](https://github.com/OmarKadish)
+* Enhanced by Peter for Test 2 submission
+
+---
+
+*Last Updated: March 2026*
 

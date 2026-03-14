@@ -21721,13 +21721,35 @@ dl li {
 /* === Landing screens === */
 /* Auth */
 .auth .login-half-bg {
-  background: url("../images/auth/login-bg.jpg");
+  background: url("../images/auth/login-bg.png");
   background-size: cover;
+  background-position: center;
+  position: relative;
+}
+.auth .login-half-bg::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .auth .register-half-bg {
-  background: url("../images/auth/register-bg.jpg");
+  background: url("../images/auth/login-bg.png");
   background-size: cover;
+  background-position: center;
+  position: relative;
+}
+.auth .register-half-bg::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .auth.lock-full-bg {
